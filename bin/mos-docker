@@ -1,0 +1,22 @@
+#!/bin/sh
+# Run an llvm-mos SDK tool in a container with the current directory at /work.
+# Either "mos-docker <tool> [args...]", or symlink to a tool name
+# (ln -s mos-docker mos-c64-clang) and invoke the symlink.
+set -eu
+
+: "${MOS_IMAGE:=ghcr.io/anarkiwi/docker-mos-llvm-sdk:latest}"
+: "${MOS_DOCKER:=docker}"
+
+tool=$(basename "$0")
+if [ "${tool}" = "mos-docker" ]; then
+  [ $# -gt 0 ] || { echo "usage: mos-docker <tool> [args...]" >&2; exit 2; }
+  tool=$1
+  shift
+fi
+
+# shellcheck disable=SC2086 # MOS_DOCKER_OPTS is intentionally word split.
+exec "${MOS_DOCKER}" run --rm -i \
+  -u "$(id -u):$(id -g)" \
+  -v "${PWD}:/work" -w /work \
+  ${MOS_DOCKER_OPTS:-} \
+  "${MOS_IMAGE}" "${tool}" "$@"
