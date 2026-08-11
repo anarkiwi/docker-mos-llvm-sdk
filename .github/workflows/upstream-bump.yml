@@ -1,0 +1,52 @@
+name: upstream-bump
+
+on:
+  schedule:
+    - cron: '17 5 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  bump:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: check upstream release
+        id: up
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          release=$(gh api repos/llvm-mos/llvm-mos-sdk/releases/latest)
+          version=$(printf '%s' "${release}" | jq -r .tag_name)
+          sha=$(printf '%s' "${release}" \
+            | jq -r '.assets[] | select(.name == "llvm-mos-linux.tar.xz") | .digest' \
+            | sed 's/^sha256://')
+          case "${version}${sha}" in
+            *null*|"") echo "cannot resolve upstream release" >&2; exit 1;;
+          esac
+          current=$(sed -n 's/^ARG LLVM_MOS_VERSION=//p' Dockerfile)
+          echo "version=${version}" >> "${GITHUB_OUTPUT}"
+          echo "changed=$([ "${version}" = "${current}" ] && echo false || echo true)" \
+            >> "${GITHUB_OUTPUT}"
+          sed -i \
+            -e "s|^ARG LLVM_MOS_VERSION=.*|ARG LLVM_MOS_VERSION=${version}|" \
+            -e "s|^ARG LLVM_MOS_SHA256=.*|ARG LLVM_MOS_SHA256=${sha}|" Dockerfile
+
+      - name: open pull request
+        if: steps.up.outputs.changed == 'true'
+        uses: peter-evans/create-pull-request@v7
+        with:
+          token: ${{ secrets.BUMP_TOKEN || secrets.GITHUB_TOKEN }}
+          branch: llvm-mos-${{ steps.up.outputs.version }}
+          commit-message: "llvm-mos SDK ${{ steps.up.outputs.version }}"
+          title: "llvm-mos SDK ${{ steps.up.outputs.version }}"
+          body: |
+            Pin llvm-mos SDK
+            [${{ steps.up.outputs.version }}](https://github.com/llvm-mos/llvm-mos-sdk/releases/tag/${{ steps.up.outputs.version }}).
+
+            Merging releases an image of the same version.
+          delete-branch: true
