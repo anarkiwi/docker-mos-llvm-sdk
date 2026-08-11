@@ -38,7 +38,7 @@ jobs:
 
       - name: open pull request
         if: steps.up.outputs.changed == 'true'
-        uses: peter-evans/create-pull-request@v7
+        uses: peter-evans/create-pull-request@v8
         with:
           token: ${{ secrets.BUMP_TOKEN || secrets.GITHUB_TOKEN }}
           branch: llvm-mos-${{ steps.up.outputs.version }}
