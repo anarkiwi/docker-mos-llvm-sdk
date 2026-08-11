@@ -17,7 +17,9 @@ verified against `LLVM_MOS_SHA256` at build time.
 | `upstream-bump` | daily 05:17 UTC, manual | open a PR bumping the pins to the latest SDK release |
 
 `upstream-bump` reads the release asset digest from the GitHub API, so it does not download
-the tarball. Dependabot covers the Debian base image and the actions used here; it cannot
+the tarball. It builds and smoke tests the new pin before opening the PR, because pull
+requests opened with `GITHUB_TOKEN` do not start workflow runs; the PR body links the run
+that tested it. Dependabot covers the Debian base image and the actions used here; it cannot
 track upstream GitHub releases, which is what `upstream-bump` exists for.
 
 Merging a bump PR publishes `vX.Y.Z`, `X.Y.Z` and `latest`, and creates the matching GitHub
@@ -32,10 +34,9 @@ a base image update) and leaves the existing GitHub release alone.
 | `DOCKERHUB_USERNAME` | secret | no | Docker Hub push |
 | `DOCKERHUB_TOKEN` | secret | no | Docker Hub access token; absent disables Docker Hub push |
 | `DOCKERHUB_IMAGE` | variable | no | Docker Hub repository, default `anarkiwi/mos-llvm-sdk` |
-| `BUMP_TOKEN` | secret | no | PAT (`repo` scope) so bump PRs trigger `ci`; falls back to `GITHUB_TOKEN` |
 
-PRs opened with `GITHUB_TOKEN` do not start workflow runs, so without `BUMP_TOKEN` a bump PR
-must be checked by re-running `ci` manually or by pushing to its branch.
+No personal access token is needed. `upstream-bump` tests the pin in its own run rather than
+relying on `ci` running against the PR it opens.
 
 ## Manual release
 

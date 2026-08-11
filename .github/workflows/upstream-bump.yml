@@ -36,17 +36,39 @@ jobs:
             -e "s|^ARG LLVM_MOS_VERSION=.*|ARG LLVM_MOS_VERSION=${version}|" \
             -e "s|^ARG LLVM_MOS_SHA256=.*|ARG LLVM_MOS_SHA256=${sha}|" Dockerfile
 
+      # PRs opened with GITHUB_TOKEN do not start workflow runs, so the new pin
+      # is built and tested here instead of on the pull request.
+      - uses: docker/setup-buildx-action@v4
+        if: steps.up.outputs.changed == 'true'
+
+      - name: build
+        if: steps.up.outputs.changed == 'true'
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          load: true
+          tags: mos-llvm-sdk:bump
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: smoke test
+        if: steps.up.outputs.changed == 'true'
+        run: tests/smoke.sh mos-llvm-sdk:bump ${{ steps.up.outputs.version }}
+
       - name: open pull request
         if: steps.up.outputs.changed == 'true'
         uses: peter-evans/create-pull-request@v8
         with:
-          token: ${{ secrets.BUMP_TOKEN || secrets.GITHUB_TOKEN }}
           branch: llvm-mos-${{ steps.up.outputs.version }}
           commit-message: "llvm-mos SDK ${{ steps.up.outputs.version }}"
           title: "llvm-mos SDK ${{ steps.up.outputs.version }}"
           body: |
             Pin llvm-mos SDK
             [${{ steps.up.outputs.version }}](https://github.com/llvm-mos/llvm-mos-sdk/releases/tag/${{ steps.up.outputs.version }}).
+
+            Built and smoke tested in
+            [this run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }});
+            `ci` does not run on pull requests opened by `GITHUB_TOKEN`.
 
             Merging releases an image of the same version.
           delete-branch: true
