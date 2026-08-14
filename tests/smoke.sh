@@ -22,11 +22,12 @@ got=$(docker run --rm "${image}" sh -c 'printf %s "$LLVM_MOS_VERSION"')
 [ "${got}" = "${expected}" ] || fail "image LLVM_MOS_VERSION ${got} != ${expected}"
 ok "version ${got}"
 
-major=${expected#v}
-major=${major%%.*}
-run mos-clang --version | grep -q "clang version ${major}\." \
-  || fail "clang major version does not match SDK ${expected}"
-ok "clang major version ${major}"
+# llvm-mos tracks LLVM main, so the clang major is independent of the SDK tag
+# (SDK v22.7.1 and v23.0.1 both ship clang 23; v23.1.0 ships clang 24).
+clang_version=$(run mos-clang --version \
+  | sed -n 's/.*clang version \([0-9][^ ]*\).*/\1/p')
+[ -n "${clang_version}" ] || fail "mos-clang did not report a clang version"
+ok "clang version ${clang_version}"
 
 for tool in mos-c64-clang mos-c64-clang++ mos-nes-clang mos-cx16-clang \
             mos-mega65-clang llvm-objcopy ld.lld llvm-mlb; do
