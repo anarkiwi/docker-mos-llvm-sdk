@@ -2,8 +2,8 @@
 
 # Pinned upstream release, updated by .github/workflows/upstream-bump.yml.
 # The image release version is derived from LLVM_MOS_VERSION.
-ARG LLVM_MOS_VERSION=v23.1.0
-ARG LLVM_MOS_SHA256=fda0f1892e438ef4e6bbb82501e8c68665ca6a24520845e3f50b116b66212bb4
+ARG LLVM_MOS_VERSION=v23.2.0
+ARG LLVM_MOS_SHA256=4d6c9f1833666261a3178906cef11d9544b0f3a8c238f9c288073a8055ae9e61
 
 FROM debian:trixie-slim AS fetch
 ARG LLVM_MOS_VERSION
